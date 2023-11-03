@@ -29,4 +29,5 @@ public class User {
     @Column(nullable = false)
     private String phone;
     private String role;
+    private boolean isEnabled = false;
 }

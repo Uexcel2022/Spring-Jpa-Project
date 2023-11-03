@@ -3,14 +3,12 @@ package com.uexcel.spring.security.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.util.Calendar;
 import java.util.Date;
 @Entity
 @Data
-@NoArgsConstructor
+@NoArgsConstructor()
 public class UserToken {
-    public final int TOKEN_EXPIRATION_TIME = 10;
     @Id
     @SequenceGenerator(
             name = "token_sequence",
@@ -26,7 +24,7 @@ public class UserToken {
     private String token;
     private Date expirationTime;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinColumn(
             name = "user_id",
             foreignKey =
@@ -38,20 +36,22 @@ public class UserToken {
         super();
         this.user = user;
         this.token = token;
-        this.expirationTime = getExpirationTime();
+        this.expirationTime = expiryTime();
     }
 
     public  UserToken(String token){
         super();
         this.token = token;
-        this.expirationTime = getExpirationTime();
+        this.expirationTime = expiryTime();
     }
 
-    private Date getExpirationTime() {
+    private Date expiryTime() {
+        int expiresInTenMinutes = 10;
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(new Date().getTime());
-        calendar.add(Calendar.MINUTE, TOKEN_EXPIRATION_TIME);
+        calendar.add(Calendar.MINUTE, expiresInTenMinutes);
 
         return  new Date(calendar.getTime().getTime());
     }
+
 }
