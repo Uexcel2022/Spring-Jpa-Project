@@ -10,7 +10,7 @@ import java.util.Date;
 @Data
 @NoArgsConstructor
 public class UserToken {
-    public final int EXPIRATION_TIME = 10;
+    public final int TOKEN_EXPIRATION_TIME = 10;
     @Id
     @SequenceGenerator(
             name = "token_sequence",
@@ -38,19 +38,19 @@ public class UserToken {
         super();
         this.user = user;
         this.token = token;
-        this.expirationTime = getExpirationTIme();
+        this.expirationTime = getExpirationTime();
     }
 
     public  UserToken(String token){
         super();
         this.token = token;
-        this.expirationTime = getExpirationTIme();
+        this.expirationTime = getExpirationTime();
     }
 
-    private Date getExpirationTIme() {
+    private Date getExpirationTime() {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(new Date().getTime());
-        calendar.add(Calendar.MINUTE, EXPIRATION_TIME);
+        calendar.add(Calendar.MINUTE, TOKEN_EXPIRATION_TIME);
 
         return  new Date(calendar.getTime().getTime());
     }
