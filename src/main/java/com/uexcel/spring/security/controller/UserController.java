@@ -6,15 +6,12 @@ import com.uexcel.spring.security.model.UserModel;
 import com.uexcel.spring.security.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.concurrent.Flow;
 
 @RestController
 public class UserController {
@@ -30,7 +27,7 @@ public class UserController {
     public  String saveUser(@RequestBody UserModel userModel,
                             HttpServletRequest request){
         if(userModel.getMatchingPassword()
-                .equals(userModel.getMatchingPassword())){
+                .equals(userModel.getPassword())){
           User user = userService.registerUser(userModel);
           applicationEventPublisher.publishEvent(
                   new RegistrationCompleteEvent(
