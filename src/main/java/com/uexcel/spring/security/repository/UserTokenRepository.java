@@ -10,4 +10,11 @@ import org.springframework.stereotype.Repository;
 public interface UserTokenRepository extends JpaRepository<UserToken, Long> {
    @Query("SELECT s FROM UserToken s WHERE s.token=:token")
     UserToken findByToken(@Param("token")String token);
+
+   @Query(
+          value = "SELECT Max(token_id) FROM user_token WHERE user_id =:userId",
+           nativeQuery = true
+   )
+   Long findUserLastTokenId(@Param("userId") long userId);
+
 }

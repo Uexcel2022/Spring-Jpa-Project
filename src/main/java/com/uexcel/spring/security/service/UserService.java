@@ -9,4 +9,9 @@ public interface UserService {
     void saveUserToken(User user, String token);
 
     boolean verifyUserToken(String token);
+
+    String findUserByEmail(String email, String url, String servletPath);
+
+    String resetUserPassword(
+            String token , String password);
 }
