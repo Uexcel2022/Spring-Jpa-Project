@@ -3,6 +3,7 @@ package com.uexcel.spring.security.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.Calendar;
@@ -12,17 +13,17 @@ import java.util.UUID;
 @Entity
 @Data
 @NoArgsConstructor
-public class ResetPassword {
+public class ValidationToken {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long restTokenId;
+    private Long resetTokenId;
     private Date tokenExpiryDate;
-    private String resetPasswordToken;
+    private String resetToken;
     private String email;
 
-    public ResetPassword(String email){
+    public ValidationToken(String email){
         this.email = email;
-        this.resetPasswordToken = UUID.randomUUID().toString();
+        this.resetToken = UUID.randomUUID().toString();
         this.tokenExpiryDate = generateExpiryTime();
     }
 

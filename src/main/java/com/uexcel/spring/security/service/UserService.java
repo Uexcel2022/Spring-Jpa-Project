@@ -10,7 +10,7 @@ public interface UserService {
 
     boolean verifyUserToken(String token);
 
-    String findUserByEmail(String email, String url, String servletPath);
+    String reset(String email, String url, String servletPath);
 
     String resetUserPassword(
             String token , String password);

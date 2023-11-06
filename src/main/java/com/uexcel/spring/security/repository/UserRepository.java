@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -25,5 +26,11 @@ public interface UserRepository extends JpaRepository<User,Long> {
     int updateUserByEmail(
             @Param("email") String email,
             @Param("newPassword") String password
+    );
+
+    @Query("SELECT s FROM User s WHERE s.email= email AND " +
+            "password =password")
+    List<User> findByEmailAndPassword(
+            String email, String password
     );
 }

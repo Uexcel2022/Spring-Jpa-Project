@@ -23,6 +23,21 @@ public class UserController {
         return "I'm practicing Spring Security";
     }
 
+    @PostMapping("/register")
+    public  String saveUser(@RequestBody UserModel userModel,
+                            HttpServletRequest request){
+        if(userModel.getMatchingPassword()
+                .equals(userModel.getPassword())){
+            User user = userService.registerUser(userModel);
+            applicationEventPublisher.publishEvent(
+                    new RegistrationCompleteEvent(
+                            user,applicationUrl(request))
+            );
+            return "Success";
+        }
+        return "passwords did not match";
+    }
+
     @GetMapping("/verifyRegistration")
     public String validateToken(@RequestParam("token") String token){
        boolean isValid = userService.verifyUserToken(token);
@@ -35,26 +50,27 @@ public class UserController {
     @PostMapping("/resendVerificationToken")
     public String resendVerificationToken(
             @RequestBody RestPasswordModel restPasswordModel, HttpServletRequest request){
-            return userService.findUserByEmail(
+            return userService.reset(
                     restPasswordModel.getEmail(), applicationUrl(request),
                     request.getServletPath());
 
     }
 
-//    @PostMapping("/resendPasswordResetToken")
-//    public String resendPasswordResetToken(
-//            @RequestBody String email, HttpServletRequest request) {
-//        return userService.findUserByEmail(
-//                email, applicationUrl(request));
-//    }
-
-
-        @PostMapping("/resetPassword")
+    @PostMapping("/resetPassword")
     public String resetPassword(
                 @RequestBody RestPasswordModel restPasswordModel, HttpServletRequest request){
-            return userService.findUserByEmail(
+            return userService.reset(
                     restPasswordModel.getEmail(), applicationUrl(request) ,request.getServletPath()
             );
+    }
+
+
+    @PostMapping("/resendPasswordResetToken")
+    public String resendPasswordResetToken(
+            @RequestBody RestPasswordModel restPasswordModel, HttpServletRequest request) {
+        return userService.reset(
+                restPasswordModel.getEmail(), applicationUrl(request),
+                request.getServletPath());
     }
 
 
@@ -67,20 +83,6 @@ public class UserController {
 
     }
 
-    @PostMapping("/register")
-    public  String saveUser(@RequestBody UserModel userModel,
-                            HttpServletRequest request){
-        if(userModel.getMatchingPassword()
-                .equals(userModel.getPassword())){
-          User user = userService.registerUser(userModel);
-          applicationEventPublisher.publishEvent(
-                  new RegistrationCompleteEvent(
-                          user,applicationUrl(request))
-          );
-          return "Success";
-        }
-        return "passwords did not match";
-    }
 
     private String applicationUrl(HttpServletRequest request) {
         String url = "http://"+ request.getServerName()+
