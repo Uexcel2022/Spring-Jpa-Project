@@ -6,9 +6,9 @@ import com.uexcel.spring.security.model.UserModel;
 public interface UserService {
     User registerUser(UserModel userModel);
 
-    void saveUserToken(User user, String token);
+    String saveTokens(User user);
 
-    boolean verifyUserToken(String token);
+    String verifyUserToken(String token);
 
     String reset(String email, String url, String servletPath);
 

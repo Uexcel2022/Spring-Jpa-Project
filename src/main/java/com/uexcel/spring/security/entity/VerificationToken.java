@@ -5,10 +5,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.UUID;
+
 @Entity
 @Data
-@NoArgsConstructor()
-public class UserToken {
+@NoArgsConstructor
+public class VerificationToken {
     @Id
     @SequenceGenerator(
             name = "token_sequence",
@@ -22,24 +24,31 @@ public class UserToken {
     private Long tokenId;
     @Column(nullable = false)
     private String token;
+    @Column(nullable = false)
     private Date expirationTime;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToOne(cascade = CascadeType.ALL,
+            fetch = FetchType.EAGER,
+            optional = false
+    )
     @JoinColumn(
             name = "user_id",
-            foreignKey =
-            @ForeignKey(name = "user_fk_in_user_token_entity")
+           foreignKey =
+           @ForeignKey(
+                   name = "User_FK_In_VerificationToken_Entity"
+           )
+
     )
     private User user;
 
-    public  UserToken(User user, String token){
+    public VerificationToken(User user){
         super();
         this.user = user;
-        this.token = token;
+        this.token = UUID.randomUUID().toString();
         this.expirationTime = expiryTime();
     }
 
-    public  UserToken(String token){
+    public VerificationToken(String token){
         super();
         this.token = token;
         this.expirationTime = expiryTime();

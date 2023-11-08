@@ -2,7 +2,7 @@ package com.uexcel.spring.security.controller;
 
 import com.uexcel.spring.security.entity.User;
 import com.uexcel.spring.security.event.RegistrationCompleteEvent;
-import com.uexcel.spring.security.model.RestPasswordModel;
+import com.uexcel.spring.security.model.PasswordModel;
 import com.uexcel.spring.security.model.UserModel;
 import com.uexcel.spring.security.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,36 +40,33 @@ public class UserController {
 
     @GetMapping("/verifyRegistration")
     public String validateToken(@RequestParam("token") String token){
-       boolean isValid = userService.verifyUserToken(token);
-       if(isValid){
-           return "Verified";
-       }
-       return "Bad user";
+       return userService.verifyUserToken(token);
     }
+
 
     @PostMapping("/resendVerificationToken")
     public String resendVerificationToken(
-            @RequestBody RestPasswordModel restPasswordModel, HttpServletRequest request){
+            @RequestBody PasswordModel passwordModel, HttpServletRequest request){
             return userService.reset(
-                    restPasswordModel.getEmail(), applicationUrl(request),
+                    passwordModel.getEmail(), applicationUrl(request),
                     request.getServletPath());
 
     }
 
     @PostMapping("/resetPassword")
     public String resetPassword(
-                @RequestBody RestPasswordModel restPasswordModel, HttpServletRequest request){
+            @RequestBody PasswordModel passwordModel, HttpServletRequest request){
             return userService.reset(
-                    restPasswordModel.getEmail(), applicationUrl(request) ,request.getServletPath()
+                    passwordModel.getEmail(), applicationUrl(request) ,request.getServletPath()
             );
     }
 
 
     @PostMapping("/resendPasswordResetToken")
     public String resendPasswordResetToken(
-            @RequestBody RestPasswordModel restPasswordModel, HttpServletRequest request) {
+            @RequestBody PasswordModel passwordModel, HttpServletRequest request) {
         return userService.reset(
-                restPasswordModel.getEmail(), applicationUrl(request),
+                passwordModel.getEmail(), applicationUrl(request),
                 request.getServletPath());
     }
 
@@ -77,9 +74,9 @@ public class UserController {
     @PostMapping("resetPassword/{token}")
     public String restPassword(
             @PathVariable("token")String token,
-            @RequestBody RestPasswordModel restPasswordModel
+            @RequestBody PasswordModel passwordModel
     ){
-          return userService.resetUserPassword(token,restPasswordModel.getPassword());
+          return userService.resetUserPassword(token, passwordModel.getPassword());
 
     }
 

@@ -5,7 +5,6 @@ import com.uexcel.spring.security.model.UserModel;
 import com.uexcel.spring.security.service.LoginAndEditAllService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,12 +16,13 @@ public class FullEditController {
    public String login(){
        return null;
    }
+
     @PostMapping("/loginEdit")
     public String loginEdit(
             @RequestBody LoginModel loginModel,
              HttpServletRequest request
     ){
-      return loginAndEditAllService.login(
+      return loginAndEditAllService.loginReset(
               loginModel, applicationUrl(request));
     }
 
@@ -37,7 +37,6 @@ public class FullEditController {
         String url = "http://"+ request.getServerName()+
                 ":"+ request.getServerPort()
                 + request.getContextPath();
-//        System.out.println("**********"+request.getServletPath()+"***************");
         return url;
     }
 }

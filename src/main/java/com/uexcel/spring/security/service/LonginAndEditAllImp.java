@@ -1,11 +1,11 @@
 package com.uexcel.spring.security.service;
 
-import com.uexcel.spring.security.entity.ValidationToken;
+import com.uexcel.spring.security.entity.PasswordResetToken;
 import com.uexcel.spring.security.entity.User;
 import com.uexcel.spring.security.model.LoginModel;
 import com.uexcel.spring.security.model.UserModel;
 import com.uexcel.spring.security.repository.UserRepository;
-import com.uexcel.spring.security.repository.ValidationTokenRepository;
+import com.uexcel.spring.security.repository.PasswordResetTokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -23,50 +24,59 @@ public class LonginAndEditAllImp implements LoginAndEditAllService {
     UserRepository userRepository;
 
     @Autowired
-    ValidationTokenRepository validationTokenRepository;
+    PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired
     PasswordEncoder passwordEncoder;
-    public String login(LoginModel loginModel, String applicationUrl) {
-        List<User> user =
-                userRepository.findByEmailAndPassword(
-                        loginModel.getEmail(),
-                        passwordEncoder.encode(loginModel.getPassword())
-                );
-
-        if(!user.isEmpty()){
-            ValidationToken validationToken =
-                    new ValidationToken(loginModel.getEmail());
-            validationTokenRepository.save(validationToken);
-            String token = validationToken.getResetToken();
-            String editUrl =
-                    applicationUrl + "/edit/" + token;
-            log.info("Use the link to reset your credentials {}", editUrl);
-            return "Email Sent for validation";
+    public String loginReset(LoginModel loginModel, String applicationUrl) {
+        String password = loginModel.getPassword();
+        Optional<User> user = userRepository.findUserByEmail(loginModel.getEmail());
+        if(user.isPresent()) {
+            boolean isPasswordMatch =
+                    passwordEncoder.matches(password, user.get().getPassword());
+            if (isPasswordMatch) {
+                Optional<PasswordResetToken> passwordResetToken =
+                        passwordResetTokenRepository
+                                .getPasswordTokenDetailsByUserId(user.get().getUserId());
+                if (passwordResetToken.isEmpty()) {
+                    return "We encountered error unable to fulfil your request";
+                }
+                PasswordResetToken oldToken = passwordResetToken.get();
+                PasswordResetToken newToken =
+                        new PasswordResetToken(UUID.randomUUID().toString());
+                oldToken.setToken(newToken.getToken());
+                oldToken.setTokenExpiryDate(newToken.getTokenExpiryDate());
+                passwordResetTokenRepository.save(oldToken);
+                String token = oldToken.getToken();
+                String editUrl =
+                        applicationUrl + "/edit/" + token;
+                log.info("Use the link to reset your credentials {}", editUrl);
+                return "Email Sent for validation";
+            }
+            return "Invalid log in credentials";
         }
         return "Invalid log in credentials";
     }
 
     @Override
     public String editUser(UserModel userModel, String token) {
-        List<ValidationToken> validationToken =
-                validationTokenRepository.findByResetToken(token);
-        if(!validationToken.isEmpty()){
+        List<PasswordResetToken> passwordResetToken =
+                passwordResetTokenRepository.findByToken(token);
+        if(!passwordResetToken.isEmpty()){
             Calendar calendar = Calendar.getInstance();
-            if(validationToken.get(0).generateExpiryTime().getTime()
+            if(passwordResetToken.get(0).getTokenExpiryDate().getTime()
              - calendar.getTime().getTime() <= 0){
-                validationTokenRepository.delete(validationToken.get(0));
                 return "The taken has expired";
             }
-
-            Optional<User> user =
-                    userRepository.findUserByEmail(validationToken.get(0).getEmail());
-            if(user.isPresent()){
-                User obj = user.get();
-                User userObj = getUser(userModel, obj);
-                userRepository.save(userObj);
-                return "Your credentials has been updated successfully.";
-            }
-            return "We encountered error; unable to fulfil your request";
+             User obj = passwordResetToken.get(0).getUser();
+             User userObj = getUser(userModel, obj);
+             userRepository.save(userObj);
+             PasswordResetToken oldToken = passwordResetToken.get(0);
+             PasswordResetToken resetToken =
+                     new PasswordResetToken(UUID.randomUUID().toString());
+             oldToken.setToken(resetToken.getToken());
+             oldToken.setTokenExpiryDate(resetToken.getTokenExpiryDate());
+             passwordResetTokenRepository.save(oldToken);
+             return "Your credentials has been updated successfully.";
 
         }
 

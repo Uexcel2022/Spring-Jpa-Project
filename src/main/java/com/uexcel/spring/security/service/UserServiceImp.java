@@ -1,12 +1,12 @@
 package com.uexcel.spring.security.service;
 
-import com.uexcel.spring.security.entity.ValidationToken;
+import com.uexcel.spring.security.entity.PasswordResetToken;
 import com.uexcel.spring.security.entity.User;
-import com.uexcel.spring.security.entity.UserToken;
+import com.uexcel.spring.security.entity.VerificationToken;
 import com.uexcel.spring.security.model.UserModel;
-import com.uexcel.spring.security.repository.ValidationTokenRepository;
+import com.uexcel.spring.security.repository.PasswordResetTokenRepository;
 import com.uexcel.spring.security.repository.UserRepository;
-import com.uexcel.spring.security.repository.UserTokenRepository;
+import com.uexcel.spring.security.repository.VerificationTokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,11 +20,11 @@ public class UserServiceImp implements UserService {
     @Autowired
     UserRepository userRepository;
     @Autowired
-    UserTokenRepository userTokenRepository;
+    VerificationTokenRepository verificationTokenRepository;
     @Autowired
     PasswordEncoder passwordEncoder;
     @Autowired
-    ValidationTokenRepository resetPasswordRepository;
+    PasswordResetTokenRepository resetPasswordRepository;
 
     @Override
     public User registerUser(UserModel userModel) {
@@ -43,28 +43,38 @@ public class UserServiceImp implements UserService {
     }
 
     @Override
-    public void saveUserToken(User user, String token) {
-        UserToken userToken = new UserToken(user, token);
-        userTokenRepository.save(userToken);
+    public String saveTokens(User user) {
+        VerificationToken verificationToken = new VerificationToken(user);
+        PasswordResetToken passwordResetToken = new PasswordResetToken(user);
+        verificationTokenRepository.save(verificationToken);
+        resetPasswordRepository.save(passwordResetToken);
+        return verificationToken.getToken();
     }
 
     @Override
-    public boolean verifyUserToken(String token) {
-        Optional<UserToken> userToken = userTokenRepository.findByToken(token);
+    public String verifyUserToken(String token) {
+        Optional<VerificationToken> userToken =
+                verificationTokenRepository.findByToken(token);
         if (userToken.isPresent()) {
             Calendar calendar = Calendar.getInstance();
             if (userToken.get().getExpirationTime().getTime() -
                     calendar.getTime().getTime() <= 0) {
-                userTokenRepository.delete(userToken.get());
-                return false;
+//                verificationTokenRepository.delete(userToken.get());
+                return "Expired";
             }
             User user = userToken.get().getUser();
             user.setEnabled(true);
             userRepository.save(user);
-            return true;
+            VerificationToken oldToken = userToken.get();
+            VerificationToken restToken =
+                    new VerificationToken(UUID.randomUUID().toString());
+            oldToken.setToken(restToken.getToken());
+            oldToken.setExpirationTime(restToken.getExpirationTime());
+            verificationTokenRepository.save(oldToken);
+            return "You have been verified successfully";
         }
 
-        return false;
+        return "Bad user";
     }
 
     @Override
@@ -72,18 +82,17 @@ public class UserServiceImp implements UserService {
 
         Optional<User> user = userRepository.findUserByEmail(email);
         if (user.isPresent()) {
+            long userId = user.get().getUserId();
             if (servletPath.equals("/resendVerificationToken")) {
-                long userId = user.get().getUserId();
-                String token = UUID.randomUUID().toString();
-                Date date = expiryTime();
-                Long tokenId = userTokenRepository.findUserLastTokenId(userId);
-                Optional<UserToken> userToken =
-                        userTokenRepository.findById(tokenId);
+                Optional<VerificationToken> userToken =
+                        verificationTokenRepository.getVerificationDetailsUserId(userId);
                 if (userToken.isPresent()) {
-                    UserToken obj = userToken.get();
-                    obj.setToken(token);
-                    obj.setExpirationTime(date);
-                    userTokenRepository.save(obj);
+                    String token = UUID.randomUUID().toString();
+                    VerificationToken oldToken = userToken.get();
+                    VerificationToken newToken = new VerificationToken(token);
+                    oldToken.setToken(newToken.getToken());
+                    oldToken.setExpirationTime(newToken.getExpirationTime());
+                    verificationTokenRepository.save(oldToken);
 
                     String url = applicationUrl
                             + "/verifyRegistration?token=" + token;
@@ -97,78 +106,64 @@ public class UserServiceImp implements UserService {
             }
 
             if (servletPath.equals("/resetPassword")) {
-                ValidationToken resetPassword = new ValidationToken(email);
-                String token = resetPassword.getResetToken();
-                resetPasswordRepository.save(resetPassword);
-                String resetPasswordUrl =
-                        applicationUrl + "/resetPassword/" + token;
-                log.info("Click on the link to reset password {}", resetPasswordUrl);
-                return "Email has been sent";
-            }
+//                Long tokenId = resetPasswordRepository.findUserLastTokenId(userId);
+                Optional<PasswordResetToken> passwordResetToken =
+                        resetPasswordRepository.getPasswordTokenDetailsByUserId(userId);
+//                        resetPasswordRepository.findById(tokenId);
+                if (passwordResetToken.isPresent()) {
+                    PasswordResetToken oldToken = passwordResetToken.get();
+                    PasswordResetToken newToken =
+                            new PasswordResetToken(UUID.randomUUID().toString());
+                    oldToken.setToken(newToken.getToken());
+                    oldToken.setTokenExpiryDate(newToken.getTokenExpiryDate());
+                    resetPasswordRepository.save(oldToken);
 
-            if (servletPath.equals("/resendPasswordResetToken")) {
-                String token = UUID.randomUUID().toString();
-                Date date = expiryTime();
-                Long resetTokenId =
-                        resetPasswordRepository.findUserLastTokenId(user.get().getEmail());
-                Optional<ValidationToken> resetPassword =
-                        resetPasswordRepository.findById(resetTokenId);
-                if (resetPassword.isPresent()) {
-                    ValidationToken obj = resetPassword.get();
-                    obj.setTokenExpiryDate(date);
-                    obj.setResetToken(token);
-                    resetPasswordRepository.save(obj);
                     String resetPasswordUrl =
-                            applicationUrl + "/resetPassword/" + token;
+                            applicationUrl + "/resetPassword/" + newToken.getToken();
                     log.info("Click on the link to reset password {}", resetPasswordUrl);
-                    return "Email has been sent";
 
+                    return "Verification email has been sent";
                 }
-
             }
 
         }
-        return "Invalid user email!!!";
+
+            return "Invalid user email!!!";
     }
 
 
-        @Override
-        public String resetUserPassword (String token, String password){
-            List<ValidationToken> resetPassword =
-                    resetPasswordRepository.findByResetToken(token);
+    @Override
+    public String resetUserPassword (String token, String newPassword){
+        List<PasswordResetToken> resetToken =
+                resetPasswordRepository.findByToken(token);
 
-            if (resetPassword.isEmpty()) {
-                return "Bad user";
-            }
-
-            Calendar calendar = Calendar.getInstance();
-            if (
-                    resetPassword.get(0)
-                            .getTokenExpiryDate()
-                            .getTime() - calendar.getTime().getTime()
-                            <= 0
-            ) {
-                resetPasswordRepository.delete(resetPassword.get(0));
-
-                return "The has expired...";
-            }
-
-
-            int result = userRepository.updateUserByEmail(
-                    resetPassword.get(0).getEmail(),
-                    passwordEncoder.encode(password));
-            resetPasswordRepository.delete(resetPassword.get(0));
-            return "The password has been rest successfully.";
+        if (resetToken.isEmpty()) {
+            return "Bad user";
         }
 
+        Calendar calendar = Calendar.getInstance();
+        if (
+                resetToken.get(0)
+                        .getTokenExpiryDate()
+                        .getTime() - calendar.getTime().getTime()
+                        <= 0
+        ) {
 
-        private Date expiryTime () {
-            int expiresInTenMinutes = 10;
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis(new Date().getTime());
-            calendar.add(Calendar.MINUTE, expiresInTenMinutes);
-
-            return new Date(calendar.getTime().getTime());
+            return "Expired...";
         }
+
+        User user = resetToken.get(0).getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        PasswordResetToken oldToken = resetToken.get(0);
+        PasswordResetToken tokenReset  =
+                new PasswordResetToken(UUID.randomUUID().toString());
+        oldToken.setToken(tokenReset.getToken());
+        oldToken.setTokenExpiryDate(tokenReset.getTokenExpiryDate());
+        resetPasswordRepository.save(oldToken);
+        return "The password has been updated successfully.";
+    }
 
 }
+
+

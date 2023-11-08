@@ -6,8 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
-
-import java.util.UUID;
 @Component
 @Slf4j
 public class ApplicationEventList implements
@@ -16,9 +14,8 @@ public class ApplicationEventList implements
     UserService userService;
     @Override
     public void onApplicationEvent(RegistrationCompleteEvent event) {
-        String token = UUID.randomUUID().toString();
         User user = event.getUser();
-        userService.saveUserToken(user, token);
+        String token = userService.saveTokens(user);
         String url =
                 event.getApplicationUlr()+"/verifyRegistration?token="+ token;
 
