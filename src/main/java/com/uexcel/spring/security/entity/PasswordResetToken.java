@@ -22,7 +22,9 @@ public class PasswordResetToken {
             generator = "passwordResetToken_sequence"
     )
     private Long tokenId;
+    @Column(nullable = false)
     private Date tokenExpiryDate;
+    @Column(nullable = false)
     private String token;
 
 
